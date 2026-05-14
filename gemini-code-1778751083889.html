@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoltCalc WB | Smart AC & Bill Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --accent: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f1f5f9 100%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dashboard {
+            background: var(--card);
+            width: 100%;
+            max-width: 900px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+
+        /* Left Side: Inputs */
+        .config-side {
+            padding: 40px;
+            border-right: 1px solid #f1f5f9;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .input-group {
+            margin-top: 25px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.2s;
+            background: #fdfdfd;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Right Side: Results */
+        .summary-side {
+            background: #fcfcfd;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .total-card {
+            background: var(--primary);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .total-amount {
+            font-size: 42px;
+            font-weight: 800;
+            margin: 10px 0;
+        }
+
+        .breakdown {
+            margin-top: 30px;
+            flex-grow: 1;
+        }
+
+        .bill-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .bill-item b {
+            color: var(--text-main);
+        }
+
+        .tier-indicator {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .tier-progress {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            transition: width 0.5s ease, background 0.5s ease;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .badge-ac { background: #fee2e2; color: #ef4444; }
+
+        @media (max-width: 850px) {
+            .dashboard { grid-template-columns: 1fr; }
+            .config-side { border-right: none; border-bottom: 1px solid #f1f5f9; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="config-side">
+        <div class="header">
+            <h1>⚡ VoltCalc WB</h1>
+            <p>Smart Electricity Dashboard for West Bengal</p>
+        </div>
+
+        <div class="input-group">
+            <div class="grid-2">
+                <div>
+                    <label>Electricity Provider</label>
+                    <select id="provider" onchange="calculate()">
+                        <option value="cesc">CESC (Kolkata)</option>
+                        <option value="wbsedcl">WBSEDCL (Bengal)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Billing Cycle</label>
+                    <select id="cycle" onchange="calculate()">
+                        <option value="1">Monthly</option>
+                        <option value="3">Quarterly (3 Months)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>AC Specifications</label>
+            <div class="grid-2">
+                <select id="ton" onchange="calculate()">
+                    <option value="1.0">1.0 Ton</option>
+                    <option value="1.5" selected>1.5 Ton</option>
+                    <option value="2.0">2.0 Ton</option>
+                </select>
+                <select id="star" onchange="calculate()">
+                    <option value="5">5 Star (Inverter)</option>
+                    <option value="3" selected>3 Star</option>
+                    <option value="1">1 Star</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <div class="grid-2">
+                <div>
+                    <label>Daily AC Hours</label>
+                    <input type="number" id="hours" value="8" oninput="calculate()">
+                </div>
+                <div>
+                    <label>Days per Month</label>
+                    <input type="number" id="days" value="30" oninput="calculate()">
+                </div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Avg. Temperature (°C): <span id="tempVal">24</span>°</label>
+            <input type="range" id="temp" min="16" max="30" value="24" step="1" oninput="updateTempDisplay()">
+        </div>
+
+        <div class="input-group">
+            <label>Other Home Units (Monthly)</label>
+            <input type="number" id="otherUnits" value="100" oninput="calculate()">
+        </div>
+    </div>
+
+    <div class="summary-side">
+        <div class="total-card">
+            <div style="font-size: 12px; opacity: 0.8; text-transform: uppercase;">Estimated Bill</div>
+            <div class="total-amount">₹<span id="grandTotal">0</span></div>
+            <div id="cycleLabel" style="font-size: 13px; opacity: 0.9;">per month</div>
+        </div>
+
+        <div class="breakdown">
+            <div class="badge badge-ac">Usage Breakdown</div>
+            <div class="bill-item">
+                <span>AC Consumption</span>
+                <b><span id="acUnits">0</span> Units</b>
+            </div>
+            <div class="bill-item">
+                <span>Total Units</span>
+                <b><span id="totalUnits">0</span> Units</b>
+            </div>
+            
+            <div class="tier-indicator">
+                <div class="tier-progress" id="progressBar"></div>
+            </div>
+
+            <div style="margin-top: 40px;" class="badge">Charges</div>
+            <div class="bill-item">
+                <span>Energy Charge</span>
+                <b>₹<span id="energyCharge">0</span></b>
+            </div>
+            <div class="bill-item">
+                <span>Govt. Duty (Tax)</span>
+                <b>₹<span id="taxCharge">0</span></b>
+            </div>
+        </div>
+
+        <p style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 20px;">
+            Data strictly follows latest WB Electricity Regulatory norms.
+        </p>
+    </div>
+</div>
+
+<script>
+    function updateTempDisplay() {
+        document.getElementById('tempVal').innerText = document.getElementById('temp').value;
+        calculate();
+    }
+
+    function calculate() {
+        // 1. Get Inputs
+        const provider = document.getElementById("provider").value;
+        const cycle = parseInt(document.getElementById("cycle").value);
+        const ton = parseFloat(document.getElementById("ton").value);
+        const star = parseInt(document.getElementById("star").value);
+        const hours = parseFloat(document.getElementById("hours").value) || 0;
+        const days = parseFloat(document.getElementById("days").value) || 0;
+        const temp = parseFloat(document.getElementById("temp").value);
+        const otherUnitsMonthly = parseFloat(document.getElementById("otherUnits").value) || 0;
+
+        // Save to LocalStorage
+        const inputs = ['provider', 'cycle', 'ton', 'star', 'hours', 'days', 'temp', 'otherUnits'];
+        inputs.forEach(id => localStorage.setItem(id, document.getElementById(id).value));
+
+        // 2. AC Logic
+        let baseKwh = 1.0; 
+        if (ton === 1.0) baseKwh *= 0.65;
+        if (ton === 2.0) baseKwh *= 1.35;
+        if (star === 5) baseKwh *= 0.75;
+        if (star === 1) baseKwh *= 1.30;
+        
+        let tempEffect = 1 + ((24 - temp) * 0.08);
+        let acUnitsMonthly = baseKwh * tempEffect * hours * days;
+        
+        // 3. Bill Cycle Logic
+        let totalUnits = (acUnitsMonthly + otherUnitsMonthly) * cycle;
+        let slabMultiplier = (provider === 'wbsedcl') ? cycle : 1; 
+
+        // 4. Tariff Logic (simplified for display)
+        let energyCharge = 0;
+        let units = totalUnits;
+
+        if (provider === "cesc") {
+            // Slabs don't change based on cycle as much as WBSEDCL
+            if (units <= 25) energyCharge = units * 5.18;
+            else if (units <= 60) energyCharge = 129.5 + (units-25)*5.69;
+            else if (units <= 100) energyCharge = 328.6 + (units-60)*6.70;
+            else energyCharge = 596.6 + (units-100)*7.50; 
+        } else {
+            // WBSEDCL Slabs - Multiplied by cycle (e.g. 100 units monthly becomes 300 units quarterly)
+            let s1 = 34 * slabMultiplier, s2 = 60 * slabMultiplier, s3 = 100 * slabMultiplier;
+            if (units <= s1) energyCharge = units * 5.04;
+            else if (units <= s2) energyCharge = (s1*5.04) + (units-s1)*6.33;
+            else if (units <= s3) energyCharge = (s1*5.04) + ((s2-s1)*6.33) + (units-s2)*7.12;
+            else energyCharge = (s1*5.04) + ((s2-s1)*6.33) + ((s3-s2)*7.12) + (units-s3)*7.80;
+        }
+
+        // Tax: 10% if units > (300 * cycle)
+        let tax = (units > (300 * cycle)) ? energyCharge * 0.10 : 0;
+        let totalPayable = energyCharge + tax + (15 * cycle);
+
+        // 5. Update UI
+        document.getElementById("acUnits").innerText = Math.round(acUnitsMonthly * cycle);
+        document.getElementById("totalUnits").innerText = Math.round(units);
+        document.getElementById("energyCharge").innerText = Math.round(energyCharge);
+        document.getElementById("taxCharge").innerText = Math.round(tax);
+        document.getElementById("grandTotal").innerText = Math.round(totalPayable).toLocaleString('en-IN');
+        document.getElementById("cycleLabel").innerText = (cycle === 3) ? "Total for 3 Months" : "Total for 1 Month";
+
+        // Progress Bar Logic
+        let progress = (units / (500 * cycle)) * 100;
+        const pb = document.getElementById("progressBar");
+        pb.style.width = Math.min(progress, 100) + "%";
+        pb.style.background = progress > 60 ? "var(--danger)" : "var(--accent)";
+    }
+
+    // Load from LocalStorage on Startup
+    window.onload = () => {
+        const inputs = ['provider', 'cycle', 'ton', 'star', 'hours', 'days', 'temp', 'otherUnits'];
+        inputs.forEach(id => {
+            if (localStorage.getItem(id)) {
+                document.getElementById(id).value = localStorage.getItem(id);
+            }
+        });
+        updateTempDisplay();
+    };
+</script>
+
+</body>
+</html>
